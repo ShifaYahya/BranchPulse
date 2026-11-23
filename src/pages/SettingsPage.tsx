@@ -93,7 +93,7 @@ export function SettingsPage() {
             <label htmlFor="model">Model</label>
             <input id="model" className="input mono" value={s.aiModel} onChange={(e) => updateSettings({ aiModel: e.target.value })} />
             <span className="hint">
-              Leave as <span className="mono">gemini-flash-latest</span> unless you know you want another free model.
+              Leave as <span className="mono">gemini-flash-latest</span>. If Google is busy, BranchPulse retries and switches to another free model automatically.
             </span>
           </div>
           {s.aiKey && (

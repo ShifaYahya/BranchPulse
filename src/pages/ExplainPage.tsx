@@ -354,6 +354,7 @@ function ActionsCard({ r }: { r: Report }) {
 function AiCard({ r, businessName }: { r: Report; businessName: string }) {
   const { ws } = useStore();
   const [state, setState] = useState<{ loading: boolean; error?: string; result?: AiResult; for?: string }>({ loading: false });
+  const [status, setStatus] = useState('');
   const reportKey = `${r.branch}|${r.period.end}`;
   const known = useMemo(() => {
     const set = new Set<string>();
@@ -368,7 +369,7 @@ function AiCard({ r, businessName }: { r: Report; businessName: string }) {
   const run = async () => {
     setState({ loading: true, for: reportKey });
     try {
-      const result = await generateBrief(r, ws.settings.aiKey, ws.settings.aiModel, businessName, known);
+      const result = await generateBrief(r, ws.settings.aiKey, ws.settings.aiModel, businessName, known, setStatus);
       setState({ loading: false, result, for: reportKey });
     } catch (e) {
       setState({ loading: false, error: e instanceof Error ? e.message : 'Something went wrong.', for: reportKey });
@@ -398,6 +399,7 @@ function AiCard({ r, businessName }: { r: Report; businessName: string }) {
         )}
       </div>
       {!hasKey && <p className="small muted">Everything on this page works without AI. If you'd like a ready-to-send paragraph, add a free Gemini key in Settings (takes about a minute).</p>}
+      {state.loading && <p className="small muted">{status || 'Writing…'}</p>}
       {state.for === reportKey && state.error && (
         <div className="notice bad">
           <IAlert /> <span>{state.error}</span>
@@ -412,6 +414,7 @@ function AiCard({ r, businessName }: { r: Report; businessName: string }) {
             <span className={`pill ${res.unknown.length ? 'pill-bad' : 'pill-good'}`}>
               {res.unknown.length ? `${res.unknown.length} citation${res.unknown.length > 1 ? 's' : ''} could not be verified: ${res.unknown.join(', ')}` : `All ${res.cited.length} citations checked against your records`}
             </span>
+            <span className="tiny muted">Written by {res.model}</span>
             <CopyBtn text={res.text} />
           </div>
         </div>

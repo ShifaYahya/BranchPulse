@@ -1,41 +1,85 @@
 # BranchPulse
 
-When one branch has a bad week, the sales total tells you *what* happened but not *why*. BranchPulse fills that gap.
+**Find out why a branch made less money, with proof.**
 
-You give it a few CSV exports (sales, staffing, stockouts, opening hours, customer feedback, local events). It tells you in plain English why a branch made less money. Every claim points to the exact rows in your files, and each explanation ends with a short list of things to fix.
+![BranchPulse home](docs/home.jpg)
 
-It's built for multi-branch cafés, clinics, gyms and shops.
+## The problem
 
-## What it does
+You run several branches. One week, one branch makes less money than the rest.
 
-- **Dashboard**: every branch at a glance, with the one that needs attention flagged
-- **Branch explanation**: ranked reasons, the estimated money effect of each, how confident it is, and the records behind it
-- **Daily briefs**: what went wrong on each day of the week
-- **Compare**: any two branches side by side
-- **Action tracker**: turn suggestions into tasks with owners and due dates
-- **Records**: browse every row it read, using the same IDs the explanations cite
-- **Sharing**: copy a brief to WhatsApp or email, print to PDF, export CSV
-- **Optional AI write-up**: uses a free Google Gemini key, and every citation it makes is checked
+The sales report shows the drop but not the reason. Was it missing staff? A popular item that ran out? A late opening? Rain? Unhappy customers? The answers are spread across different systems, so most owners end up guessing.
 
-## Privacy
+## The solution
 
-There's no server and no account. Files are read in your browser and stay on your device.
+BranchPulse puts your data together and explains the drop in plain English:
 
-## Run it
+> *"Al Malqa made SAR 10,661 less than a usual week. Two days were short-staffed, oat milk ran out for three days, and the branch opened 95 minutes late on Saturday."*
+
+Every reason links to the exact record that proves it, and you get a short list of fixes.
+
+![Branch explanation](docs/explain.jpg)
+
+## How it works
+
+```mermaid
+flowchart LR
+    A[Upload your CSV files] --> B[Find a normal day<br/>same weekday, last 4 weeks]
+    B --> C[Remove city-wide dips<br/>rain, holidays]
+    C --> D[Check each bad day<br/>staff · stock · hours · events · reviews]
+    D --> E[Reasons + SAR impact<br/>+ proof + fixes]
+```
+
+1. **Upload files.** Sales is required. Staff, stock, opening hours, reviews and events are optional.
+2. **Find "normal".** Each day is compared with the same weekday over the past 4 weeks.
+3. **Remove what hit everyone.** If every branch was down on a rainy day, one branch isn't blamed for it.
+4. **Look for reasons.** On each bad day it checks for missing staff, items running out, late opening, nearby events and complaints.
+5. **Show the answer.** You see the reasons ranked by estimated money lost, each with the record behind it and a fix.
+
+![Reasons with proof](docs/reasons.jpg)
+
+## What's inside
+
+| Page | What it does |
+|---|---|
+| **Overview** | Every branch at a glance, with the one that needs attention flagged |
+| **Explain** | Why a branch dropped: reasons, money lost, proof and fixes |
+| **Compare** | Two branches side by side |
+| **Actions** | Turn fixes into tasks with an owner and a due date |
+| **Records** | Every row from your files, searchable |
+| **Data** | Upload files, download templates, try the sample data |
+
+![Overview](docs/overview.jpg)
+
+## Private by design
+
+There's no server and no login. Your files stay in your own browser.
+
+## Optional AI write-up (free)
+
+BranchPulse works fully without AI. If you want a ready-to-send message for your team:
+
+1. Get a free key at [Google AI Studio](https://aistudio.google.com/app/apikey).
+2. Paste it in **Settings**.
+3. On the **Explain** page, press **Write it for me**.
+
+The AI only rewrites what BranchPulse already found, and every record it mentions is checked. If Google's free servers are busy, BranchPulse retries and switches to another free model by itself.
+
+## Try it
+
+Open the app and click **See it with sample data**. It loads a made-up café chain with 4 branches and 5 weeks of data.
+
+## Run on your computer
 
 ```bash
 npm install
 npm run dev
 ```
 
-Other commands: `npm test` runs the tests, `npm run build` builds the site into `dist/`.
+## Deploy (free)
 
-## Deploy
-
-It's a static site. Import the repo into Vercel, Netlify or Cloudflare Pages. The build command is `npm run build` and the output folder is `dist`. No environment variables are needed.
-
-## Your files
-
-Only sales is required. Each extra file lets BranchPulse check one more possible reason. Column names are matched automatically. Inside the app, the File guide lists every accepted column and has templates you can download.
+1. Sign in to [vercel.com](https://vercel.com) with GitHub.
+2. Click **Add New → Project** and import this repo.
+3. Click **Deploy**. Nothing else needs to be set.
 
 Built with React, TypeScript and Vite.

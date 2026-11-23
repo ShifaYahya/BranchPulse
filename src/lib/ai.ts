@@ -52,43 +52,86 @@ export interface AiResult {
   text: string;
   cited: string[];
   unknown: string[];
+  model: string;
 }
 
-export async function generateBrief(r: Report, key: string, model: string, businessName: string, known: Set<string>): Promise<AiResult> {
-  const m = (model || 'gemini-flash-latest').trim();
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`;
+/** Free models tried in order when one is busy or unavailable. */
+export const FALLBACK_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite'];
+
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+class StopError extends Error {}
+
+async function callModel(model: string, key: string, prompt: string): Promise<{ ok: true; text: string } | { ok: false; status: number; message: string }> {
   let res: Response;
   try {
-    res = await fetch(url, {
+    res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key.trim() },
       body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: buildPrompt(r, businessName) }] }],
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: { temperature: 0.3, maxOutputTokens: 1200 },
       }),
     });
   } catch {
-    throw new Error('Could not reach Google. Check your internet connection and try again.');
+    throw new StopError('Could not reach Google. Check your internet connection and try again.');
   }
   if (!res.ok) {
-    let msg = `Google returned an error (${res.status}).`;
+    let message = '';
     try {
-      const j = await res.json();
-      if (j?.error?.message) msg = j.error.message;
+      message = (await res.json())?.error?.message ?? '';
     } catch {
       /* ignore */
     }
-    if (res.status === 400 && /api key/i.test(msg)) msg = 'That API key was not accepted. Copy it again from Google AI Studio.';
-    if (res.status === 403) msg = 'This key is not allowed to use the Gemini API. Create a new key in Google AI Studio.';
-    if (res.status === 404) msg = `The model "${m}" was not found. Try "gemini-flash-latest" in Settings.`;
-    if (res.status === 429) msg = 'The free quota is used up for now. Wait a minute and try again.';
-    throw new Error(msg);
+    return { ok: false, status: res.status, message };
   }
   const json = await res.json();
   const text: string = (json?.candidates?.[0]?.content?.parts ?? []).map((p: { text?: string }) => p.text ?? '').join('').trim();
-  if (!text) throw new Error('The model returned an empty answer. Try again.');
-  const ids = [...new Set(text.match(/\b(?:SAL|STF|STK|HRS|FBK|EVT)-\d+\b/g) ?? [])];
-  return { text, cited: ids.filter((i) => known.has(i)), unknown: ids.filter((i) => !known.has(i)) };
+  if (!text) return { ok: false, status: 503, message: 'empty answer' };
+  return { ok: true, text };
+}
+
+/**
+ * Calls Gemini. If a model is busy (503/500), rate-limited (429) or missing (404),
+ * it waits briefly, retries, then moves on to the next free model automatically.
+ */
+export async function generateBrief(
+  r: Report,
+  key: string,
+  model: string,
+  businessName: string,
+  known: Set<string>,
+  onStatus?: (msg: string) => void,
+): Promise<AiResult> {
+  const prompt = buildPrompt(r, businessName);
+  const models = [...new Set([(model || '').trim(), ...FALLBACK_MODELS].filter(Boolean))];
+  let sawLimit = false;
+
+  try {
+    for (const m of models) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        onStatus?.(attempt === 0 ? `Writing with ${m}…` : `${m} is busy, trying again…`);
+        const out = await callModel(m, key, prompt);
+        if (out.ok) {
+          const ids = [...new Set(out.text.match(/\b(?:SAL|STF|STK|HRS|FBK|EVT)-\d+\b/g) ?? [])];
+          return { text: out.text, cited: ids.filter((i) => known.has(i)), unknown: ids.filter((i) => !known.has(i)), model: m };
+        }
+        if (out.status === 400 && /api key/i.test(out.message)) throw new StopError('That API key was not accepted. Copy it again from Google AI Studio and paste it in Settings.');
+        if (out.status === 401 || out.status === 403) throw new StopError('This key is not allowed to use the Gemini API. Create a new key in Google AI Studio.');
+        if (out.status === 404 || out.status === 400) break; // model not available, try the next one
+        if (out.status === 429) sawLimit = true;
+        await wait(attempt === 0 ? 1500 : 0);
+      }
+    }
+  } catch (e) {
+    if (e instanceof StopError) throw new Error(e.message);
+    throw e;
+  }
+  throw new Error(
+    sawLimit
+      ? 'The free limit for your key is used up for now. Wait a minute and try again. Everything else on this page still works.'
+      : "Google's free AI servers are very busy right now. This is temporary. Please try again in a few minutes. Everything else on this page still works.",
+  );
 }
 
 /** Plain-text version of a report, for copy/paste into WhatsApp, email or Slack. */
