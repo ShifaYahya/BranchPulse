@@ -119,7 +119,6 @@ export function PrivacyPage() {
           ['The optional AI write-up', 'Only if you add your own Google Gemini key and press “Write it for me”, a summary of the findings (branch name, amounts, reasons and record IDs) is sent directly from your browser to Google. Raw files are never sent. Google’s own terms apply to that request.'],
           ['Your API key', 'Your key is stored only in this browser and is not included in backups.'],
           ['Deleting your data', 'Use Settings → Delete everything, or clear your browser’s site data. Download a backup first if you want to keep a copy.'],
-          ['Fonts', 'Fonts are loaded from Google Fonts. No business data is included in those requests.'],
         ].map(([t, d]) => (
           <div className="card-flat" key={t}>
             <h3 style={{ fontSize: 18 }}>{t}</h3>

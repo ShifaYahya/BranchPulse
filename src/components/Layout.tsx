@@ -97,7 +97,11 @@ export function Footer() {
         </div>
       </div>
       <div className="container tiny faint" style={{ marginTop: 26 }}>
-        © {new Date().getFullYear()} BranchPulse. Estimates are based on the data you provide and are meant to guide decisions, not replace your judgement.
+        © {new Date().getFullYear()}{' '}
+        <a href="https://branchpulse.vercel.app/#/" style={{ color: 'inherit' }}>
+          branchpulse.vercel.app
+        </a>
+        . Estimates are based on the data you provide and are meant to guide decisions, not replace your judgement.
       </div>
     </footer>
   );
